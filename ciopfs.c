@@ -419,8 +419,10 @@ static int ciopfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi)
 {
 	int ret = 0;
+	int i, n;
 	DIR *dp = (DIR *)(uintptr_t)fi->fh;
 	struct dirent *de;
+	struct dirent **namelist = 0;
 	char *p = map_path(path);
 	if (unlikely(p == NULL))
 		return -ENOMEM;
@@ -438,12 +440,23 @@ static int ciopfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		goto out;
 	}
 
-	seekdir(dp, offset);
+	debug("path: %s, p: %s\n", path, p);
 
-	while ((de = readdir(dp)) != NULL) {
+	n = scandir(p, &namelist, 0, alphasort);
+	if (n <= 0) {
+		ret = -EBADF;
+		goto out;
+	}
+
+	debug ("got %d entries from scandir", n);
+
+	for (i = 0; i < n; i++ ) {
 		struct stat st;
 		char *dname;
 		char *attrlower;
+
+		/* Do assignment from scandir */
+		de = namelist[i];
 
 		/* skip any entry which is not all lower case for now */
 		if (str_contains_upper(de->d_name))
@@ -478,11 +491,16 @@ static int ciopfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 				dname = de->d_name;
 		}
 		debug("dname: %s\n", dname);
-		if (filler(buf, dname, &st, telldir(dp)))
+
+		ret = filler(buf, dname, &st, 0);
+		free (de);
+
+		if (ret)
 			break;
 	}
 
 out:
+	if (namelist) free(namelist);
 	free(p);
 	return ret;
 }
