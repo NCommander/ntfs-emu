@@ -1,0 +1,10 @@
+NTFS Emu is a modified version of CIOPFS with a hack
+to make readdir return files in alphabetical order, 
+emulating the behavior of NTFS under Windows; this allows
+Civ5, and other apps requiring Find*Files() to return
+files in a specific order to work correctly.
+
+This code is licensed under the GPLv2
+
+CIOPFS is available here: 
+http://www.brain-dump.org/projects/ciopfs/
